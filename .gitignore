@@ -1,0 +1,13 @@
+# Ignore the entire CMake build directory
+cmake-build-debug/
+cmake-build-release/
+build/
+
+# Optional: Ignore other build artifacts
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.a
+*.lib
