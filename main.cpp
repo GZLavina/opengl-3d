@@ -118,16 +118,16 @@ int main()
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
-    Shader shader("../shaders/phong.vert", "../shaders/phong.frag");
+    Shader shader("../../shaders/phong.vert", "../../shaders/phong.frag");
 
     std::vector<Object> objectVector;
 
     Object obj;
-    obj.VAO = loadSimpleOBJ("./../Suzanne.obj",obj.nVertices);
+    obj.VAO = loadSimpleOBJ("./../../Suzanne.obj",obj.nVertices);
     objectVector.push_back(obj);
 
     Object obj2;
-    obj2.VAO = loadSimpleOBJ("./../Nave.obj",obj.nVertices);
+    obj2.VAO = loadSimpleOBJ("./../../Nave.obj",obj.nVertices);
     objectVector.push_back(obj2);
 
 

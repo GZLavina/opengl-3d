@@ -5,7 +5,6 @@ build/
 
 # Optional: Ignore other build artifacts
 *.o
-*.obj
 *.so
 *.dll
 *.exe
