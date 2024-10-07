@@ -64,7 +64,7 @@ glm::vec3 objectScale = glm::vec3(1.0f, 1.0f, 1.0f);
 glm::vec3 objectPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 bool firstMouse = true;
-float lastX = 400, lastY = 300;
+float lastX = 500, lastY = 500;
 float yaw = 0.0f;
 float pitch = 0.0f;
 
@@ -177,6 +177,9 @@ int main()
 
         obj.model = glm::mat4(1); //matriz identidade
 
+        obj.model = glm::translate(obj.model, objectPos);
+        obj.model = glm::scale(obj.model, objectScale);
+
         if (rotateX)
         {
             obj.model = glm::rotate(obj.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
@@ -192,9 +195,6 @@ int main()
             obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
         }
-
-        obj.model = glm::translate(obj.model, objectPos);
-        obj.model = glm::scale(obj.model, objectScale);
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(obj.model));
 
