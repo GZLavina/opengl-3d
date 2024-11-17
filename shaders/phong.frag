@@ -5,37 +5,43 @@ in vec2 texCoord;
 in vec3 scaledNormal;
 in vec3 fragPos;
 
-//surface
-uniform float ka;
-uniform float ks;
-uniform float kd;
-uniform float q;
+//Propriedades da superficie
+uniform float ka, kd, ks, q;
 
-//light properties
-uniform vec3 lightPos;
-uniform vec3 lightColor;
+//Propriedades da fonte de luz
+uniform vec3 lightPos, lightColor;
 
-//camera properties
+//Propriedades da câmera
 uniform vec3 cameraPos;
 
 out vec4 color;
+//Buffer da textura
+uniform sampler2D texBuffer;
 
-void main() {
+void main()
+{
 
+    //Coeficiente luz ambiente
     vec3 ambient = ka * lightColor;
 
+
+    //Coeficiente reflexão difusa
+    vec3 diffuse;
     vec3 N = normalize(scaledNormal);
     vec3 L = normalize(lightPos - fragPos);
-    float diff = max(dot(N, L), 0.0);
-    vec3 diffuse = kd * diff * lightColor;
+    float diff = max(dot(N,L),0.0);
+    diffuse = kd * diff * lightColor;
 
+    //Coeficiente reflexão especular
+    vec3 specular;
+    vec3 R = normalize(reflect(-L,N));
     vec3 V = normalize(cameraPos - fragPos);
-    vec3 R = normalize(reflect(-L, N));
-    float spec = max(dot(R, V), 0.0);
-    spec = pow(spec, q);
-    vec3 specular = ks * spec * lightColor;
+    float spec = max(dot(R,V),0.0);
+    spec = pow(spec,q);
+    specular = ks * spec * lightColor;
 
-    vec3 result = (ambient + diffuse) * finalColor + specular;
+    vec4 texColor = texture(texBuffer,texCoord);
+    vec3 result = (ambient + diffuse) * vec3(texColor) + specular;
 
-    color = vec4(result, 1.0);
+    color = vec4(result,1.0);
 }

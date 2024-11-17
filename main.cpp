@@ -16,7 +16,8 @@
 #include <fstream>
 #include <sstream>
 
-using namespace std;
+#include "stb_image.h"
+#include "json.hpp"
 
 // GLAD
 #include <glad/glad.h>
@@ -31,6 +32,8 @@ using namespace std;
 
 #include "shader.h"
 
+using namespace std;
+using json = nlohmann::json;
 
 // Protótipo da função de callback de teclado
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
@@ -40,6 +43,7 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos);
 // Protótipos das funções
 int setupGeometry();
 int loadSimpleOBJ(string filePATH, int &nVertices);
+GLuint loadTexture(string filePath, int &width, int &height);
 
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
@@ -56,8 +60,16 @@ glm::vec3 cameraUp = glm::vec3(0.0f,1.0f,0.0f);
 struct Object
 {
     GLuint VAO; //Índice do buffer de geometria
+    GLuint texID;
     int nVertices; //nro de vértices
     glm::mat4 model; //matriz de transformações do objeto
+    float ka, kd, ks;
+};
+
+struct BezierCurve {
+    std::vector<glm::vec3> controlPoints;
+    std::vector<glm::vec3> curvePoints;
+    glm::mat4x4 bernsteinMatrix;
 };
 
 glm::vec3 objectScale = glm::vec3(1.0f, 1.0f, 1.0f);
@@ -118,17 +130,19 @@ int main()
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
-    Shader shader("../../shaders/phong.vert", "../../shaders/phong.frag");
+    Shader shader("../shaders/phong.vert", "../shaders/phong.frag");
 
     std::vector<Object> objectVector;
 
     Object obj;
-    obj.VAO = loadSimpleOBJ("./../../Suzanne.obj",obj.nVertices);
+    obj.VAO = loadSimpleOBJ("../Assets/aratwearingabackpack/obj/model.obj",obj.nVertices);
+    int texWidth,texHeight;
+    obj.texID = loadTexture("../Assets/aratwearingabackpack/textures/texture_1.jpeg",texWidth,texHeight);
     objectVector.push_back(obj);
 
-    Object obj2;
-    obj2.VAO = loadSimpleOBJ("./../../Nave.obj",obj.nVertices);
-    objectVector.push_back(obj2);
+//    Object obj2;
+//    obj2.VAO = loadSimpleOBJ("./../../Nave.obj",obj.nVertices);
+//    objectVector.push_back(obj2);
 
 
     shader.use();
@@ -148,7 +162,11 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(39.6f),(float)WIDTH/HEIGHT,0.1f,100.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+    //Buffer de textura no shader
+    glUniform1i(glGetUniformLocation(shader.ID, "texBuffer"), 0);
+
     glEnable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
 
     // Surface
     shader.setFloat("ka", 0.2f);
@@ -170,8 +188,10 @@ int main()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glLineWidth(10);
-        glPointSize(20);
+        //Atualizar a matriz de view
+        //Matriz de view
+        glm::mat4 view = glm::lookAt(cameraPos,cameraPos + cameraFront,cameraUp);
+        glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
         auto angle = (GLfloat)glfwGetTime();
 
@@ -198,10 +218,6 @@ int main()
 
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(obj.model));
 
-        //Atualizar a matriz de view
-        //Matriz de view
-        glm::mat4 view = glm::lookAt(cameraPos,cameraPos + cameraFront,cameraUp);
-        glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
         shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
 
@@ -209,6 +225,7 @@ int main()
         // Chamada de desenho - drawcall
         // Poligono Preenchido - GL_TRIANGLES
         glBindVertexArray(objectVector.at(abs(int (objectVectorIndex % objectVector.size()))).VAO);
+        glBindTexture(GL_TEXTURE_2D,obj.texID);
         glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
 
 
@@ -590,4 +607,51 @@ int loadSimpleOBJ(string filePath, int &nVertices)
         cout << "Erro ao tentar ler o arquivo " << filePath << endl;
         return -1;
     }
+}
+
+GLuint loadTexture(string filePath, int &width, int &height)
+{
+    GLuint texID; // id da textura a ser carregada
+
+    // Gera o identificador da textura na memória
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_2D, texID);
+
+    // Ajuste dos parâmetros de wrapping e filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Carregamento da imagem usando a função stbi_load da biblioteca stb_image
+    int nrChannels;
+
+    unsigned char *data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, 0);
+
+//    std::cout << data << std::endl;
+//    std::cout << *data << std::endl;
+
+    if (data)
+    {
+        if (nrChannels == 3) // jpg, bmp
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        }
+        else // assume que é 4 canais png
+        {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        }
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        std::cout << "Failed to load texture " << filePath << std::endl;
+    }
+
+    stbi_image_free(data);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    return texID;
 }

@@ -10,3 +10,5 @@ build/
 *.exe
 *.a
 *.lib
+
+.idea
