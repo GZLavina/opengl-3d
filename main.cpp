@@ -44,6 +44,7 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos);
 int setupGeometry();
 int loadSimpleOBJ(string filePATH, int &nVertices);
 GLuint loadTexture(string filePath, int &width, int &height);
+void loadSceneFromJson(const string& filePath);
 
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
@@ -63,7 +64,10 @@ struct Object
     GLuint texID;
     int nVertices; //nro de vértices
     glm::mat4 model; //matriz de transformações do objeto
-    float ka, kd, ks;
+    float ka, kd, ks, q;
+    glm::vec3 scale;
+    glm::vec3 pos;
+    glm::vec3 rotationDegrees;
 };
 
 struct BezierCurve {
@@ -83,6 +87,7 @@ float pitch = 0.0f;
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 int objectVectorIndex = 0;
+std::vector<Object> objectVector;
 
 // Função MAIN
 int main()
@@ -132,33 +137,15 @@ int main()
 
     Shader shader("../shaders/phong.vert", "../shaders/phong.frag");
 
-    std::vector<Object> objectVector;
-
-    Object obj;
-    obj.VAO = loadSimpleOBJ("../Assets/aratwearingabackpack/obj/model.obj",obj.nVertices);
-    int texWidth,texHeight;
-    obj.texID = loadTexture("../Assets/aratwearingabackpack/textures/texture_1.jpeg",texWidth,texHeight);
-    objectVector.push_back(obj);
-
-//    Object obj2;
-//    obj2.VAO = loadSimpleOBJ("./../../Nave.obj",obj.nVertices);
-//    objectVector.push_back(obj2);
-
+    loadSceneFromJson("../scene.json");
 
     shader.use();
 
-
-    //Matriz de modelo
-    glm::mat4 model = glm::mat4(1); //matriz identidade;
     GLint modelLoc = glGetUniformLocation(shader.ID, "model");
-    model = glm::rotate(model, /*(GLfloat)glfwGetTime()*/glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    //Matriz de view
     glm::mat4 view = glm::lookAt(cameraPos,glm::vec3(0.0f,0.0f,0.0f),cameraUp);
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    //Matriz de projeção
-    //glm::mat4 projection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, -1.0f, 1.0f);
+
     glm::mat4 projection = glm::perspective(glm::radians(39.6f),(float)WIDTH/HEIGHT,0.1f,100.0f);
     glUniformMatrix4fv(glGetUniformLocation(shader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -167,12 +154,6 @@ int main()
 
     glEnable(GL_DEPTH_TEST);
     glActiveTexture(GL_TEXTURE0);
-
-    // Surface
-    shader.setFloat("ka", 0.2f);
-    shader.setFloat("ks", 0.5f);
-    shader.setFloat("kd", 0.5f);
-    shader.setFloat("q", 10.f);
 
     // Light
     shader.setVec3("lightPos", -2.0f, -10.0f, -3.0f);
@@ -188,52 +169,43 @@ int main()
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //Atualizar a matriz de view
-        //Matriz de view
+        // Camera
         glm::mat4 view = glm::lookAt(cameraPos,cameraPos + cameraFront,cameraUp);
         glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-
-        auto angle = (GLfloat)glfwGetTime();
-
-        obj.model = glm::mat4(1); //matriz identidade
-
-        obj.model = glm::translate(obj.model, objectPos);
-        obj.model = glm::scale(obj.model, objectScale);
-
-        if (rotateX)
-        {
-            obj.model = glm::rotate(obj.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-
-        }
-        else if (rotateY)
-        {
-            obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-
-        }
-        else if (rotateZ)
-        {
-            obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-
-        }
-
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(obj.model));
-
-
         shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
 
+        // Objects
+        for (auto& obj : objectVector)
+        {
+            auto angle = (GLfloat)glfwGetTime();
 
-        // Chamada de desenho - drawcall
-        // Poligono Preenchido - GL_TRIANGLES
-        glBindVertexArray(objectVector.at(abs(int (objectVectorIndex % objectVector.size()))).VAO);
-        glBindTexture(GL_TEXTURE_2D,obj.texID);
-        glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
+            obj.model = glm::mat4(1); //matriz identidade
 
+            obj.model = glm::translate(obj.model, obj.pos);
+            obj.model = glm::scale(obj.model, obj.scale);
+            obj.model = glm::rotate(obj.model, glm::radians(obj.rotationDegrees.x), glm::vec3(1.0f, 0.0f, 0.0f));
+            obj.model = glm::rotate(obj.model, glm::radians(obj.rotationDegrees.y), glm::vec3(0.0f, 1.0f, 0.0f));
+            obj.model = glm::rotate(obj.model, glm::radians(obj.rotationDegrees.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+            // Surface
+            shader.setFloat("ka", obj.ka);
+            shader.setFloat("ks", obj.ks);
+            shader.setFloat("kd", obj.kd);
+            shader.setFloat("q", obj.q);
+
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(obj.model));
+            glBindVertexArray(obj.VAO);
+            glBindTexture(GL_TEXTURE_2D,obj.texID);
+            glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
+        }
 
         // Troca os buffers da tela
         glfwSwapBuffers(window);
     }
     // Pede pra OpenGL desalocar os buffers
-    glDeleteVertexArrays(1, &obj.VAO);
+    for (auto& obj : objectVector) {
+        glDeleteVertexArrays(1, &obj.VAO);
+    }
     // Finaliza a execução da GLFW, limpando os recursos alocados por ela
     glfwTerminate();
     return 0;
@@ -247,25 +219,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 
+    Object& obj = objectVector.at(abs(int (objectVectorIndex % objectVector.size())));
+
     if (key == GLFW_KEY_X && action == GLFW_PRESS)
     {
-        rotateX = true;
-        rotateY = false;
-        rotateZ = false;
+        obj.rotationDegrees.x += 5.f;
     }
 
     if (key == GLFW_KEY_Y && action == GLFW_PRESS)
     {
-        rotateX = false;
-        rotateY = true;
-        rotateZ = false;
+        obj.rotationDegrees.y += 5.f;
     }
 
     if (key == GLFW_KEY_Z && action == GLFW_PRESS)
     {
-        rotateX = false;
-        rotateY = false;
-        rotateZ = true;
+        obj.rotationDegrees.z += 5.f;
     }
 
     //Verifica a movimentação da câmera
@@ -298,31 +266,31 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     float scaleChangeRate = 0.05f;
     if (key == GLFW_KEY_HOME && action == GLFW_PRESS) {
-        objectScale += scaleChangeRate;
+        obj.scale += scaleChangeRate;
     }
     if (key == GLFW_KEY_END && action == GLFW_PRESS) {
-        objectScale -= scaleChangeRate;
+        obj.scale -= scaleChangeRate;
     }
 
     // Translação do objeto
     float translationChangeRate = 0.1f;
     if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-        objectPos.y += translationChangeRate;
+        obj.pos.y += translationChangeRate;
     }
     if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-        objectPos.y -= translationChangeRate;
+        obj.pos.y -= translationChangeRate;
     }
     if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-        objectPos.x += translationChangeRate;
+        obj.pos.x += translationChangeRate;
     }
     if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        objectPos.x -= translationChangeRate;
+        obj.pos.x -= translationChangeRate;
     }
     if (key == GLFW_KEY_E && action == GLFW_PRESS) {
-        objectPos.z += translationChangeRate;
+        obj.pos.z += translationChangeRate;
     }
     if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
-        objectPos.z -= translationChangeRate;
+        obj.pos.z -= translationChangeRate;
     }
 
     // Seleção de objeto
@@ -332,6 +300,42 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_PERIOD && action == GLFW_PRESS) {
         objectVectorIndex++;
     }
+}
+
+void loadSceneFromJson(const string& filePath)
+{
+    std::ifstream i(filePath);
+    json j;
+    i >> j;
+
+    json objectsArray = j["objects"];
+    std::cout << std::setw(4) << objectsArray << std::endl;
+    for (auto& object : objectsArray) {
+        auto objectPathString = object["objPath"].template get<std::string>();
+        auto texPathString = object["texPath"].template get<std::string>();
+        auto posVector = object["pos"].template get<std::vector<float>>();
+        auto scaleVector = object["scale"].template get<std::vector<float>>();
+        auto rotationDegrees = object["rotationDegrees"].template get<std::vector<float>>();
+        auto ka = object["ka"].template get<float>();
+        auto ks = object["ks"].template get<float>();
+        auto kd = object["kd"].template get<float>();
+        auto q = object["q"].template get<float>();
+
+        Object obj{};
+        obj.VAO = loadSimpleOBJ(objectPathString,obj.nVertices);
+        int texWidth,texHeight;
+        obj.texID = loadTexture(texPathString,texWidth,texHeight);
+        obj.pos = glm::vec3(posVector[0], posVector[1], posVector[2]);
+        obj.scale = glm::vec3(scaleVector[0], scaleVector[1], scaleVector[2]);
+        obj.rotationDegrees = glm::vec3(rotationDegrees[0], rotationDegrees[1], rotationDegrees[2]);
+        obj.ka = ka;
+        obj.ks = ks;
+        obj.kd = kd;
+        obj.q = q;
+        objectVector.push_back(obj);
+    }
+
+
 }
 
 void mouse_callback(GLFWwindow* window, double xPos, double yPos)
@@ -598,7 +602,7 @@ int loadSimpleOBJ(string filePath, int &nVertices)
         // Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
         glBindVertexArray(0);
 
-        nVertices = vBuffer.size() / 2;
+        nVertices = vBuffer.size() / 11;
         return VAO;
 
     }

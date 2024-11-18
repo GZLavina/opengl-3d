@@ -1,0 +1,39 @@
+{
+    "objects":[
+        {
+            "objPath": "../Assets/aratwearingabackpack/obj/model.obj",
+            "texPath": "../Assets/aratwearingabackpack/textures/texture_1.jpeg",
+            "pos": [2.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0],
+            "rotationDegrees": [180.0, 90.0, 0.0],
+            "ka": 0.9,
+            "ks": 0.9,
+            "kd": 0.9,
+            "q": 10.0
+    
+        },
+        {
+            "objPath": "../Assets/aratwearingabackpack/obj/model.obj",
+            "texPath": "../Assets/aratwearingabackpack/textures/texture_1.jpeg",
+            "pos": [0.0, 0.0, 2.0],
+            "scale": [1.0, 1.0, 1.0],
+            "rotationDegrees": [0.0, 0.0, 0.0],
+            "ka": 0.2,
+            "ks": 0.5,
+            "kd": 0.5,
+            "q": 10.0
+    
+        }
+    ],
+    "light": [
+        {
+            "pos": [1.2, 1.0, 2.0],
+            "color": [1.0, 1.0, 1.0]
+        }
+    ],
+    "camera": {
+        "pos": [0.0, 0.0, 3.0],
+        "front": [0.0, 0.0, -1.0],
+        "up": [0.0, 1.0, 0.0]
+    }
+}
