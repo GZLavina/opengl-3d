@@ -1,9 +1,9 @@
 {
     "objects":[
         {
-            "objPath": "../Assets/aratwearingabackpack/obj/model.obj",
-            "texPath": "../Assets/aratwearingabackpack/textures/texture_1.jpeg",
-            "mtlPath": "../Assets/aratwearingabackpack/material/model.mtl",
+            "objPath": "../../Assets/aratwearingabackpack/obj/model.obj",
+            "texPath": "../../Assets/aratwearingabackpack/textures/texture_1.jpeg",
+            "mtlPath": "../../Assets/aratwearingabackpack/material/model.mtl",
             "pos": [2.0, 0.0, 0.0],
             "scale": [1.0, 1.0, 1.0],
             "rotationDegrees": [0.0, 0.0, 0.0],
@@ -14,9 +14,9 @@
     
         },
         {
-            "objPath": "../Assets/Planetas/planeta.obj",
-            "texPath": "../Assets/Planetas/Terra.jpg",
-            "mtlPath": "../Assets/Planetas/planeta.mtl",
+            "objPath": "../../Assets/Planetas/planeta.obj",
+            "texPath": "../../Assets/Planetas/Terra.jpg",
+            "mtlPath": "../../Assets/Planetas/planeta.mtl",
             "pos": [0.0, 0.0, 0.0],
             "scale": [0.3, 0.3, 0.3],
             "rotationDegrees": [0.0, 0.0, 0.0],
