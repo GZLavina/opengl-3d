@@ -11,6 +11,13 @@
 
 - Caso ocorra erro na leitura dos arquivos de shader ou dos arquivos .obj, verifique se o caminho destes arquivos no main.cpp está correspondendo com o caminho relativo do .exe até os arquivos em questão. O CMake pode produzir .exe com locais diferentes dependendo do ambiente, exigindo que os caminhos relativos sejam ajustados no código fonte.
 
+## Carregamento da cena a partir do arquivo JSON
+
+- O arquivo `scene.json` já está no modelo correto de configuração da cena;
+- Não implementamos a capacidade de carregar objetos com mais de um grupo de malhas;
+- Não implementamos a possibilidade de inserir mais de uma fonte de luz;
+- Os valores Ka, Ks e Kd de um objeto lido no arquivo JSON são substituídos pelos valores do arquivo MTL se existirem;
+
 ## Controles
 
 ### Controles do objeto
@@ -25,7 +32,7 @@
 
 - Escala (todos os eixos): HOME e END
 
-- Seleção de objeto: ',' (ou '<') e '.' (ou '>')
+- Seleção de objeto: ',' e '.'
 
 ### Controles da camera
 
